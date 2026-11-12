@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Falta</title>
+<meta name="theme-color" content="#0e130d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Falta">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{
+  --bg:#0e130d; --card:#161d15; --line:#243022;
+  --text:#eef2ea; --dim:#8c9a87;
+  --green:#6b9a5f; --green-soft:#2c3f29; --danger:#c96f5c;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif}
+body{min-height:100dvh;padding:calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 110px);
+  max-width:520px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:22px}
+h1{font-size:30px;font-weight:700;letter-spacing:-.02em;margin:0}
+header span{color:var(--dim);font-size:14px;text-transform:capitalize}
+h2{font-size:12px;font-weight:600;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin:28px 0 12px}
+
+/* Tallos: tiempo que queda */
+.stems{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;background:var(--card);
+  border-radius:22px;padding:18px 14px 14px}
+.stem{display:flex;flex-direction:column;align-items:center;gap:8px}
+.stem .tube{width:26px;height:110px;border-radius:13px;background:var(--green-soft);
+  display:flex;align-items:flex-end;overflow:hidden}
+.stem .fill{width:100%;background:var(--green);border-radius:13px;transition:height .6s ease}
+.stem b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.stem small{font-size:11px;color:var(--dim)}
+
+/* Eventos */
+.event{background:var(--card);border-radius:22px;padding:18px 20px;margin-bottom:12px;
+  cursor:pointer;user-select:none;-webkit-user-select:none;position:relative}
+.event:active{transform:scale(.985)}
+.event .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.event .name{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.event .edit{background:none;border:0;color:var(--dim);font-size:20px;padding:4px 6px;margin:-4px -6px;cursor:pointer}
+.event .num{font-size:64px;font-weight:700;letter-spacing:-.04em;line-height:1;margin:14px 0 4px;
+  font-variant-numeric:tabular-nums;color:var(--green)}
+.event.past .num{color:var(--dim)}
+.event .unit{font-size:14px;color:var(--dim)}
+.event .date{font-size:12px;color:var(--dim);margin-top:10px}
+.bar{height:6px;border-radius:3px;background:var(--green-soft);margin-top:12px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--green);border-radius:3px}
+.empty{color:var(--dim);text-align:center;padding:40px 20px;font-size:15px;line-height:1.5}
+
+.fab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 24px);
+  width:60px;height:60px;border-radius:30px;border:0;background:var(--green);color:#0e130d;
+  font-size:32px;font-weight:300;line-height:1;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+
+/* Hoja */
+.veil{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .25s}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;background:var(--card);
+  border-radius:26px 26px 0 0;padding:22px 20px calc(env(safe-area-inset-bottom) + 22px);
+  transform:translateY(105%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+.open .veil{opacity:1;pointer-events:auto}
+.open .sheet{transform:none}
+.sheet h3{margin:0 0 16px;font-size:20px}
+label{display:block;font-size:12px;color:var(--dim);margin:14px 0 6px;letter-spacing:.04em}
+input{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);
+  border-radius:14px;padding:13px 14px;font-size:16px;font-family:inherit;color-scheme:dark;min-height:48px}
+input:focus{outline:none;border-color:var(--green)}
+.actions{display:flex;gap:10px;margin-top:22px}
+.actions button{flex:1;border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit}
+#save{background:var(--green);color:#0e130d}
+#cancel{background:var(--line);color:var(--text)}
+#del{background:none;color:var(--danger);flex:0 0 auto;padding:14px 10px}
+</style>
+</head>
+<body>
+<header><h1>Falta</h1><span id="today"></span></header>
+
+<h2>Lo que queda</h2>
+<div class="stems" id="stems"></div>
+
+<h2>Mis fechas</h2>
+<div id="list"></div>
+
+<button class="fab" id="add" aria-label="Añadir fecha">+</button>
+
+<div class="veil" id="veil"></div>
+<div class="sheet" role="dialog" aria-modal="true">
+  <h3 id="sheetTitle">Nueva fecha</h3>
+  <label for="fName">Nombre</label>
+  <input id="fName" maxlength="40" placeholder="Examen, viaje, cumpleaños…" autocomplete="off">
+  <label for="fDate">Fecha</label>
+  <input id="fDate" type="date">
+  <label for="fStart">Inicio (opcional, para ver el progreso)</label>
+  <input id="fStart" type="date">
+  <div class="actions">
+    <button id="del" hidden>Borrar</button>
+    <button id="cancel">Cancelar</button>
+    <button id="save">Guardar</button>
+  </div>
+</div>
+
+<script>
+const KEY='falta.eventos.v1', DAY=864e5;
+const UNITS=['días','semanas','meses','horas'];
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const parse=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const fmtNum=n=>n.toLocaleString('es-ES',{maximumFractionDigits:1});
+
+let events=[], editing=null;
+function load(){
+  try{events=JSON.parse(localStorage.getItem(KEY))}catch(e){events=null}
+  if(!Array.isArray(events)){
+    const y=new Date().getFullYear();
+    events=[
+      {id:'a',name:'Fin del Plan 120',date:'2027-03-01',start:'2026-11-02',unit:0},
+      {id:'b',name:'Año nuevo',date:(y+1)+'-01-01',start:y+'-01-01',unit:0}
+    ];
+  }
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(events))}catch(e){}}
+
+function renderStems(){
+  const n=new Date();
+  const d0=new Date(n.getFullYear(),n.getMonth(),n.getDate());
+  const d1=new Date(+d0+DAY*1); d1.setHours(0,0,0,0);
+  const w0=new Date(d0); w0.setDate(d0.getDate()-((d0.getDay()+6)%7));
+  const w1=new Date(w0); w1.setDate(w0.getDate()+7);
+  const m0=new Date(n.getFullYear(),n.getMonth(),1), m1=new Date(n.getFullYear(),n.getMonth()+1,1);
+  const y0=new Date(n.getFullYear(),0,1), y1=new Date(n.getFullYear()+1,0,1);
+  const rows=[
+    ['Hoy',d0,d1,ms=>Math.ceil(ms/36e5)+' h'],
+    ['Semana',w0,w1,ms=>Math.ceil(ms/DAY)+' d'],
+    ['Mes',m0,m1,ms=>Math.ceil(ms/DAY)+' d'],
+    ['Año',y0,y1,ms=>Math.ceil(ms/DAY)+' d']
+  ];
+  $('stems').innerHTML=rows.map(([label,a,b,f])=>{
+    const left=b-n, pct=Math.max(0,Math.min(100,left/(b-a)*100));
+    return `<div class="stem"><div class="tube"><div class="fill" style="height:${pct.toFixed(1)}%"></div></div>
+      <b>${f(left)}</b><small>${label}</small></div>`;
+  }).join('');
+  $('today').textContent=n.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'short'});
+}
+
+function value(ms,unit){
+  const a=Math.abs(ms);
+  if(unit===0) return Math.ceil(a/DAY);
+  if(unit===1) return Math.round(a/DAY/7*10)/10;
+  if(unit===2) return Math.round(a/DAY/30.4375*10)/10;
+  return Math.ceil(a/36e5);
+}
+function renderList(){
+  const now=new Date();
+  const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const sorted=[...events].sort((a,b)=>{
+    const da=parse(a.date)-today, db=parse(b.date)-today;
+    if((da<0)!==(db<0)) return da<0?1:-1;
+    return da<0?db-da:da-db;
+  });
+  if(!sorted.length){$('list').innerHTML='<div class="empty">Aún no hay fechas.<br>Pulsa + para añadir la primera.</div>';return}
+  $('list').innerHTML=sorted.map(e=>{
+    const t=parse(e.date), isToday=+t===+today, past=t<today;
+    const ms=past?(today-t):(t-now);
+    const u=e.unit||0;
+    let num,unit;
+    if(isToday){num='Hoy';unit='es el día'}
+    else{
+      const v=value(ms,u);
+      num=fmtNum(v);
+      const name=v===1?['día','semana','mes','hora'][u]:UNITS[u];
+      unit=(past?'hace · ':'faltan · ')+name;
+    }
+    let bar='';
+    if(e.start){
+      const s=parse(e.start);
+      if(t>s){const p=Math.max(0,Math.min(100,(now-s)/(t-s)*100));
+        bar=`<div class="bar"><i style="width:${p.toFixed(1)}%"></i></div>`}
+    }
+    return `<div class="event${past?' past':''}" data-id="${e.id}">
+      <div class="top"><div class="name">${esc(e.name)}</div>
+      <button class="edit" data-edit="${e.id}" aria-label="Editar">⋯</button></div>
+      <div class="num">${num}</div><div class="unit">${unit}</div>${bar}
+      <div class="date">${t.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'long',year:'numeric'})}</div>
+    </div>`;
+  }).join('');
+}
+function render(){renderStems();renderList()}
+
+function openSheet(e){
+  editing=e||null;
+  $('sheetTitle').textContent=e?'Editar fecha':'Nueva fecha';
+  $('fName').value=e?e.name:''; $('fDate').value=e?e.date:''; $('fStart').value=e&&e.start?e.start:'';
+  $('del').hidden=!e;
+  document.body.classList.add('open');
+}
+function closeSheet(){document.body.classList.remove('open');editing=null}
+
+$('add').onclick=()=>openSheet();
+$('cancel').onclick=closeSheet; $('veil').onclick=closeSheet;
+$('save').onclick=()=>{
+  const name=$('fName').value.trim(), date=$('fDate').value, start=$('fStart').value;
+  if(!name){$('fName').focus();return}
+  if(!date){$('fDate').focus();return}
+  if(editing){Object.assign(editing,{name,date,start})}
+  else events.push({id:Date.now().toString(36),name,date,start,unit:0});
+  save();closeSheet();render();
+};
+$('del').onclick=()=>{
+  if(!editing)return;
+  events=events.filter(x=>x!==editing);save();closeSheet();render();
+};
+$('list').onclick=ev=>{
+  const ed=ev.target.closest('[data-edit]');
+  if(ed){openSheet(events.find(x=>x.id===ed.dataset.edit));return}
+  const card=ev.target.closest('.event'); if(!card)return;
+  const e=events.find(x=>x.id===card.dataset.id);
+  e.unit=((e.unit||0)+1)%UNITS.length; save(); renderList();
+};
+
+load();render();
+setInterval(render,60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)render()});
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
